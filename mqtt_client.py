@@ -1,11 +1,11 @@
 import paho.mqtt.client as mqtt
 import logging
-import random
 import time
 import redis
 import json
 
 from message import Message
+from payload import PayloadGenerator
 from utils import Utils
 
 TENANT = "admin"
@@ -39,16 +39,17 @@ class MQTTClient(mqtt.Client):
         self.on_disconnect = self.locust_on_disconnect
         self.pubmmap = {}
         self.is_connected = False
+        self.payload_gen = PayloadGenerator()
 
     def set_device_id(self, device_id):
-        self.device_id = device_id    
-    
+        self.device_id = device_id
+
     def connecting(self, host, port):
         logging.info("--connecting--")
 
         self.start_time = time.time()
         try:
-            super(MQTTClient, self).connect_async(host=host, port=port, keepalive=600)  
+            super(MQTTClient, self).connect_async(host=host, port=port, keepalive=600)
             super(MQTTClient, self).loop_start()
         except Exception as e:
             logging.error(str(e))
@@ -57,7 +58,7 @@ class MQTTClient(mqtt.Client):
                 name='connect',
                 response_time=time_delta(self.start_time, time.time()),
                 exception=ConnectError("Could not connect to host:["+host+"]")
-            )    
+            )
 
 
     def locust_on_connect(self, client, flags_dict, userdata, rc):
@@ -75,9 +76,7 @@ class MQTTClient(mqtt.Client):
 
             try:
                 topic = "/{0}/{1}/attrs".format(TENANT, self.device_id)
-                payload = {
-                    'temperature': random.randrange(0,10,1)
-                } 
+                payload = self.payload_gen.next()
 
                 self.publishing(
                     topic=topic,
@@ -85,13 +84,13 @@ class MQTTClient(mqtt.Client):
                     qos=1,
                     timeout=PUBLISH_TIMEOUT)
             except Exception as e:
-                logging.error(str(e)) 
+                logging.error(str(e))
                 Utils.fire_locust_failure(
                     request_type=REQUEST_TYPE,
                     name='connect',
                     response_time=0,
                     exception=e
-                )       
+                )
 
 
     def publishing(self, topic, payload=None, qos=0, retry=5, name='messages', **kwargs):
@@ -111,7 +110,7 @@ class MQTTClient(mqtt.Client):
             [ err, mid ] = res
 
             if err:
-                logging.error(str(err)) 
+                logging.error(str(err))
                 Utils.fire_locust_failure(
                     request_type=REQUEST_TYPE,
                     name=name,
@@ -124,9 +123,9 @@ class MQTTClient(mqtt.Client):
             )
 
             logging.info("publish: err,mid:"+str(err)+","+str(mid)+"")
-          
+
         except Exception as e:
-            logging.error(str(e))   
+            logging.error(str(e))
             Utils.fire_locust_failure(
                 request_type=REQUEST_TYPE,
                 name=name,
@@ -138,7 +137,7 @@ class MQTTClient(mqtt.Client):
         logging.info("--locust_on_publish--")
 
         end_time = time.time()
-        message = self.pubmmap.pop(mid, None)  
+        message = self.pubmmap.pop(mid, None)
 
         if message is None:
             logging.info("message is none")
@@ -149,7 +148,7 @@ class MQTTClient(mqtt.Client):
                 exception=ValueError("Published message could not be found"),
             )
             return
-        
+
         total_time = Utils.time_delta(message.start_time, end_time)
         logging.info("total time: " + str(total_time))
 
@@ -171,7 +170,7 @@ class MQTTClient(mqtt.Client):
             )
 
         if self.is_connected:
-            self.disconnecting()           
+            self.disconnecting()
 
 
     def disconnecting(self):
@@ -193,4 +192,3 @@ class MQTTClient(mqtt.Client):
                 exception=DisconnectError("disconnected"),
             )
         del self
-               
