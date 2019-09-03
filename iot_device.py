@@ -23,7 +23,6 @@ class IotDevice(TaskSet):
     def on_start(self):
         self.device_id = cache.next_device_id()
         self.topic = "/admin/{}/attrs".format(str(self.device_id))
-        #self.payload = json.dumps({'temperature': random.randrange(0,10,1)})
         self.client_id = "admin:{}".format(str(self.device_id))
         self.payload_gen = PayloadGenerator()
 
