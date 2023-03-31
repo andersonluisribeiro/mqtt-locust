@@ -1,6 +1,6 @@
 paho-mqtt==1.4.0
 pyzmq==18.0.1
 locustio==0.11.0
-redis==3.3.7
+redis==4.4.4
 numpy==1.14
 geopy==1.10
